@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2D International Pursuit Extreme - Mobile Edition</title>
+    <title>2D International Pursuit Extreme - Fixed Edition</title>
     <style>
         * {
             box-sizing: border-box;
@@ -166,8 +166,8 @@
 <body>
 
     <div id="hud">
-        <h1>🚨 MOBILE PURSUIT 🚨</h1>
-        <p>Use Screen Buttons or Keyboard Controls</p>
+        <h1>🚨 PURSUIT EXTREME 🚨</h1>
+        <p>WASD / Arrows on PC | Screen Overlay on Mobile</p>
         
         <label for="upload" class="btn btn-file">📸 Face</label>
         <input type="file" id="upload" accept="image/*">
@@ -180,6 +180,7 @@
         </div>
     </div>
 
+    <!-- Virtual D-Pad UI Layers -->
     <div class="touch-zone" id="control-up">▲</div>
     <div class="touch-zone" id="control-down">▼</div>
     <div class="touch-zone" id="control-jump">JUMP</div>
@@ -218,11 +219,11 @@
         const player = {
             x: 80, y: 200, z: 0,             
             zVelocity: 0, gravity: 0.6,     
-            width: 50, height: 50, // Shrank slightly for mobile grids
+            width: 50, height: 50, 
             speed: 6, isJumping: false
         };
 
-        // --- ISOLATED AUDIO SYSTEM (JUMP ONLY) ---
+        // --- AUDIO SYSTEM ---
         function playSoundJump() {
             try {
                 const tempCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -244,7 +245,7 @@
                 
                 setTimeout(() => { tempCtx.close(); }, 200);
             } catch(e) {
-                console.log("Audio block protection trace active.");
+                console.log("Audio contextual lock active.");
             }
         }
 
@@ -326,7 +327,7 @@
         window.addEventListener('resize', resizeCanvas);
         window.addEventListener('orientationchange', () => { setTimeout(resizeCanvas, 200); });
 
-        // --- ATTACH ADVANCED TOUCH ENGINE LINK LISTS ---
+        // --- TOUCH INTERFACE CONTROLS ---
         const btnUp = document.getElementById('control-up');
         const btnDown = document.getElementById('control-down');
         const btnJump = document.getElementById('control-jump');
@@ -355,7 +356,7 @@
 
         window.addEventListener('keydown', e => {
             keys[e.code] = true;
-            if(["Space", "ArrowUp", "ArrowDown", "KeyW", "KeyS"].includes(e.code)) e.preventDefault();
+            if(["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "KeyW", "KeyS", "KeyA", "KeyD"].includes(e.code)) e.preventDefault();
         });
         window.addEventListener('keyup', e => {
             keys[e.code] = false;
@@ -372,7 +373,7 @@
 
         class CopCruiser {
             constructor() {
-                this.width = 95; this.height = 48; // Scaled down down slightly to look proportional on phone displays
+                this.width = 95; this.height = 48; 
                 this.y = lanePositions[Math.floor(Math.random() * lanePositions.length)] + 4;
                 this.x = canvas.width + this.width; 
                 this.speed = baseCopSpeed + Math.random() * 3 + (currentLevel * 1.5);
@@ -442,9 +443,15 @@
         }
 
         function handlePhysics() {
+            // Vertical movement (W/S or Up/Down Arrows)
             if (keys['ArrowUp'] || keys['KeyW']) player.y -= player.speed;
             if (keys['ArrowDown'] || keys['KeyS']) player.y += player.speed;
 
+            // Horizontal movement (A/D or Left/Right Arrows)
+            if (keys['ArrowLeft'] || keys['KeyA']) player.x -= player.speed;
+            if (keys['ArrowRight'] || keys['KeyD']) player.x += player.speed;
+
+            // Jumping mechanics
             if (keys['Space'] && !player.isJumping) {
                 player.zVelocity = 13.0; player.isJumping = true;
                 playSoundJump(); 
@@ -463,11 +470,13 @@
                 }
             }
             
+            // Boundary constraints
             if (player.x < 0) player.x = 0;
             if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
             if (player.y < 70) player.y = 70;
             if (player.y > canvas.height - player.height - 70) player.y = canvas.height - player.height - 70;
 
+            // Ground running dust details
             if (!player.isJumping && frameCount % 4 === 0) {
                 createParticle(player.x + 5, player.y + player.height - 4, -2, 0, Math.random() * 3 + 1, 'rgba(180, 180, 180, ALPHA)', 14);
             }
