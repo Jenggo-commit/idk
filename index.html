@@ -401,13 +401,20 @@
         async function fetchGlobalLeaderboard() {
             try {
                 const response = await fetch(GLOBAL_DB_URL);
-                if (!response.ok) throw new Error("No database entries yet");
+                if (!response.ok) throw new Error();
                 const globalData = await response.json();
-                
                 let sortedList = Object.values(globalData).sort((a, b) => b.score - a.score).slice(0, 5);
                 renderLeaderboardUI(sortedList);
             } catch (err) {
-                renderLeaderboardUI([]);
+                // Pull local sandbox scores if offline, blocked, or local-file sandboxed
+                let localBrd = localStorage.getItem('local_leaderboard');
+                if (localBrd) {
+                    let localData = JSON.parse(localBrd);
+                    let sortedList = Object.values(localData).sort((a, b) => b.score - a.score).slice(0, 5);
+                    renderLeaderboardUI(sortedList);
+                } else {
+                    renderLeaderboardUI([]);
+                }
             }
         }
 
@@ -433,17 +440,18 @@
 
             leaderboardContent.innerHTML = '<div class="loading-text">[UPLOADING SCORE...]</div>';
 
+            const myUID = getPlayerUID();
+            const localEntry = { name: name, score: finalScore };
+
             try {
                 let currentCloudData = {};
                 try {
                     const res = await fetch(GLOBAL_DB_URL);
                     if(res.ok) currentCloudData = await res.json();
                 } catch(e) {}
-
-                const myUID = getPlayerUID();
                 
                 if(!currentCloudData[myUID] || finalScore > currentCloudData[myUID].score) {
-                    currentCloudData[myUID] = { name: name, score: finalScore };
+                    currentCloudData[myUID] = localEntry;
                 }
 
                 await fetch(GLOBAL_DB_URL, {
@@ -453,7 +461,15 @@
                 });
                 
             } catch (error) {
-                console.error("Cloud database synchronization error: ", error);
+                console.warn("Cloud blocked by browser sandbox. Falling back to Local Storage display.");
+                
+                // Local Sandbox Backup engine
+                let localBrd = localStorage.getItem('local_leaderboard');
+                let localData = localBrd ? JSON.parse(localBrd) : {};
+                if(!localData[myUID] || finalScore > localData[myUID].score) {
+                    localData[myUID] = localEntry;
+                    localStorage.setItem('local_leaderboard', JSON.stringify(localData));
+                }
             }
 
             fetchGlobalLeaderboard();
@@ -484,7 +500,7 @@
         });
 
         startBtn.addEventListener('click', () => {
-            initAudio(); // Activate browser sound drivers via user interaction callback boundary
+            initAudio(); // Activate browser sound drivers inside valid interaction boundaries
             if (!running) {
                 hud.style.background = "rgba(20, 20, 20, 0.5)";
                 resetGame();
@@ -513,6 +529,7 @@
                         Math.random() * 1 - 0.5, 
                         Math.random() * 4 + 2, 
                         'rgba(140, 140, 140, ALPHA)', 
+                        25
                     );
                 }
                 if (Math.random() < 0.3) {
@@ -520,7 +537,7 @@
                     createParticle(this.x + 50, this.y - 4, Math.random() * 1, 0, Math.random() * 6 + 3, flareColor, 15);
                 }
                 
-                // Added: High-speed electric chase spark effects spilling off police cruisers
+                // Neon electric hazard chase spark strings spilling off police cruiser tire lines
                 if (Math.random() < 0.15) {
                     createParticle(
                         this.x + (Math.random() * this.width),
@@ -557,7 +574,6 @@
             spawnRate = 65; baseCopSpeed = 6; 
             resizeCanvas();
             
-            // Reactivate soundtrack levels smoothly on layout rebuilds
             if (audioCtx && bgmGainNode) {
                 bgmGainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
             }
@@ -584,7 +600,7 @@
                 spawnRate = Math.max(minSpawnRate, 65 - (currentLevel * 9));
                 baseCopSpeed = 6 + (currentLevel * 1.2);
                 
-                playSoundLevelUp(); // Added: Alert chime when difficulty elevates
+                playSoundLevelUp(); 
                 triggerScreenShake(20, 8);
                 createShockwave(canvas.width / 2, canvas.height / 2, canvas.width, '#ffffff');
             }
@@ -596,7 +612,7 @@
             if (keys['ArrowLeft'] || keys['KeyA']) player.x -= player.speed;
             if (keys['ArrowRight'] || keys['KeyD']) player.x += player.speed;
 
-            // Added: Nitro fire injection exhaust particle tracks while dashing rightward
+            // Nitro fire trails while dashing forward rightward
             if ((keys['ArrowRight'] || keys['KeyD']) && frameCount % 2 === 0) {
                 createParticle(
                     player.x, 
@@ -611,7 +627,7 @@
 
             if (keys['Space'] && !player.isJumping) {
                 player.zVelocity = 13.5; player.isJumping = true;
-                playSoundJump(); // Added: Kinetic leap sweep synthesizer audio trigger
+                playSoundJump(); 
                 for(let i=0; i<8; i++) {
                     createParticle(player.x + player.width/2, player.y + player.height, (Math.random()-0.5)*4, (Math.random()-0.5)*2, Math.random()*5+2, 'rgba(200, 200, 200, ALPHA)', 20);
                 }
@@ -622,7 +638,7 @@
                     player.z = 0; 
                     player.zVelocity = 0; 
                     player.isJumping = false; 
-                    playSoundLand(); // Added: Sub rumble shock impact sound
+                    playSoundLand(); 
                     triggerScreenShake(8, 4);
                     createShockwave(player.x + player.width/2, player.y + player.height/2, 45, '#ffffff');
                 }
@@ -724,7 +740,7 @@
                 handleDifficultyProgression();
             }
 
-            updateBgmPitch(); // Process active background siren track modifications frame-by-frame
+            updateBgmPitch(); 
 
             ctx.save();
             if (screenShakeTime > 0) {
@@ -744,7 +760,7 @@
 
                 if (rectIntersect(player, cops[i])) {
                     running = false;
-                    playSoundCrash(); // Added: Explode synthesizer sound assets directly on collision block
+                    playSoundCrash(); 
                     
                     triggerScreenShake(35, 15);
                     for (let pIdx = 0; pIdx < 40; pIdx++) {
