@@ -1,17 +1,15 @@
-I have completely removed the global leaderboard panel, its styles, and all of the backend API cloud-syncing code that was throwing sandboxed errors. The code is now completely self-contained and local.
-
-Here is your cleaned-up, distraction-free code:
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D International Pursuit Extreme - FX Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2D International Pursuit Extreme - Mobile Edition</title>
     <style>
         * {
             box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
         }
         body, html {
             margin: 0;
@@ -21,62 +19,57 @@ Here is your cleaned-up, distraction-free code:
             overflow: hidden;
             background: #0d0d0d;
             font-family: 'Courier New', Courier, monospace;
+            position: fixed;
         }
 
-        /* Overlay UI HUD styling */
+        /* Overlay UI HUD styling - Mobile Responsive */
         #hud {
             position: absolute;
-            top: 20px;
+            top: 10px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 10;
             text-align: center;
             background: rgba(20, 20, 20, 0.9);
-            padding: 15px 30px;
+            padding: 8px 20px;
             border: 2px solid #e74c3c;
             border-radius: 10px;
             color: #fff;
-            min-width: 360px;
-            box-shadow: 0 0 20px rgba(231, 76, 60, 0.3);
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 0 15px rgba(231, 76, 60, 0.3);
         }
 
         h1 {
-            margin: 0 0 5px 0;
-            font-size: 22px;
-            letter-spacing: 2px;
+            margin: 0;
+            font-size: 18px;
+            letter-spacing: 1px;
             color: #e74c3c;
             text-shadow: 0 0 5px rgba(231,76,60,0.5);
         }
 
         p {
-            margin: 5px 0 10px 0;
-            font-size: 11px;
+            margin: 2px 0 6px 0;
+            font-size: 10px;
             color: #aaa;
         }
 
         .btn {
             background: #e74c3c;
             color: white;
-            padding: 10px 20px;
+            padding: 6px 14px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 14px;
-            margin: 5px;
+            font-size: 12px;
+            margin: 2px;
             transition: 0.2s;
-        }
-
-        .btn:hover {
-            background: #c0392b;
+            display: inline-block;
         }
 
         .btn-file {
             background: #2ecc71;
-        }
-
-        .btn-file:hover {
-            background: #27ae60;
         }
 
         input[type="file"] {
@@ -86,13 +79,13 @@ Here is your cleaned-up, distraction-free code:
         #stats-container {
             display: flex;
             justify-content: space-around;
-            margin-top: 8px;
+            margin-top: 4px;
             border-top: 1px dashed #444;
-            padding-top: 8px;
+            padding-top: 4px;
         }
 
         .stat-box {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
         }
 
@@ -108,24 +101,88 @@ Here is your cleaned-up, distraction-free code:
             height: 100%;
             z-index: 1;
         }
+
+        /* --- MOBILE TOUCH CONTROLS OVERLAY --- */
+        .touch-zone {
+            position: absolute;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: sans-serif;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.3);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+            touch-action: none;
+        }
+
+        /* Left Side Steer Buttons */
+        #control-up {
+            bottom: 110px;
+            left: 20px;
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            font-size: 24px;
+        }
+
+        #control-down {
+            bottom: 25px;
+            left: 20px;
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            font-size: 24px;
+        }
+
+        /* Right Side Big Jump Pad */
+        #control-jump {
+            bottom: 25px;
+            right: 20px;
+            width: 100px;
+            height: 100px;
+            background: rgba(231, 76, 60, 0.15);
+            border: 2px solid rgba(231, 76, 60, 0.4);
+            border-radius: 50%;
+            font-size: 16px;
+            color: rgba(231, 76, 60, 0.6);
+        }
+
+        /* Visual Feedback Active State */
+        .touch-zone:active {
+            background: rgba(255, 255, 255, 0.3) !important;
+            color: #fff !important;
+        }
+        #control-jump:active {
+            background: rgba(231, 76, 60, 0.4) !important;
+            color: #fff !important;
+        }
     </style>
 </head>
 <body>
 
     <div id="hud">
-        <h1>🚨 GLOBAL PURSUIT 🚨</h1>
-        <p>WASD / ARROWS = Move | <b>SPACEBAR</b> = Jump</p>
+        <h1>🚨 MOBILE PURSUIT 🚨</h1>
+        <p>Use Screen Buttons or Keyboard Controls</p>
         
-        <label for="upload" class="btn btn-file">📸 Upload Face</label>
+        <label for="upload" class="btn btn-file">📸 Face</label>
         <input type="file" id="upload" accept="image/*">
         
         <button class="btn" id="start">▶ START ESCAPE</button>
         
         <div id="stats-container">
             <div class="stat-box">DIST: <span id="score-text">0m</span></div>
-            <div class="stat-box">HEAT LEVEL: <span id="level-text">1</span></div>
+            <div class="stat-box">HEAT: <span id="level-text">1</span></div>
         </div>
     </div>
+
+    <div class="touch-zone" id="control-up">▲</div>
+    <div class="touch-zone" id="control-down">▼</div>
+    <div class="touch-zone" id="control-jump">JUMP</div>
 
     <canvas id="gameCanvas"></canvas>
 
@@ -152,7 +209,6 @@ Here is your cleaned-up, distraction-free code:
         let customFace = null;
         let lanePositions = [];
 
-        // --- VISUAL EFFECTS ENGINE DATA ---
         let particles = [];
         let windStreaks = [];
         let shockwaves = [];
@@ -160,10 +216,10 @@ Here is your cleaned-up, distraction-free code:
         let screenShakeIntensity = 0;
 
         const player = {
-            x: 150, y: 200, z: 0,             
+            x: 80, y: 200, z: 0,             
             zVelocity: 0, gravity: 0.6,     
-            width: 60, height: 60,
-            speed: 7, isJumping: false
+            width: 50, height: 50, // Shrank slightly for mobile grids
+            speed: 6, isJumping: false
         };
 
         // --- ISOLATED AUDIO SYSTEM (JUMP ONLY) ---
@@ -206,16 +262,16 @@ Here is your cleaned-up, distraction-free code:
         }
 
         function updateAndDrawFX() {
-            if (Math.random() < 0.15 + (currentLevel * 0.05)) {
+            if (Math.random() < 0.12 + (currentLevel * 0.04)) {
                 windStreaks.push({
                     x: canvas.width,
                     y: Math.random() * canvas.height,
-                    speed: Math.random() * 15 + 15,
-                    length: Math.random() * 80 + 40
+                    speed: Math.random() * 12 + 12,
+                    length: Math.random() * 60 + 30
                 });
             }
             
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.13)';
             ctx.lineWidth = 1;
             for (let i = windStreaks.length - 1; i >= 0; i--) {
                 let w = windStreaks[i];
@@ -264,10 +320,25 @@ Here is your cleaned-up, distraction-free code:
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            const playableHeight = canvas.height - 180; 
-            lanePositions = [110, 110 + (playableHeight / 2), canvas.height - 110 - player.height];
+            const playableHeight = canvas.height - 140; 
+            lanePositions = [90, 90 + (playableHeight / 2), canvas.height - 90 - player.height];
         }
         window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('orientationchange', () => { setTimeout(resizeCanvas, 200); });
+
+        // --- ATTACH ADVANCED TOUCH ENGINE LINK LISTS ---
+        const btnUp = document.getElementById('control-up');
+        const btnDown = document.getElementById('control-down');
+        const btnJump = document.getElementById('control-jump');
+
+        btnUp.addEventListener('touchstart', (e) => { e.preventDefault(); keys['ArrowUp'] = true; });
+        btnUp.addEventListener('touchend', (e) => { e.preventDefault(); keys['ArrowUp'] = false; });
+        
+        btnDown.addEventListener('touchstart', (e) => { e.preventDefault(); keys['ArrowDown'] = true; });
+        btnDown.addEventListener('touchend', (e) => { e.preventDefault(); keys['ArrowDown'] = false; });
+
+        btnJump.addEventListener('touchstart', (e) => { e.preventDefault(); keys['Space'] = true; });
+        btnJump.addEventListener('touchend', (e) => { e.preventDefault(); keys['Space'] = false; });
 
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -284,9 +355,7 @@ Here is your cleaned-up, distraction-free code:
 
         window.addEventListener('keydown', e => {
             keys[e.code] = true;
-            if(e.code === "Space" || e.code === "ArrowUp" || e.code === "ArrowDown" || e.code === "KeyW" || e.code === "KeyS") {
-                e.preventDefault(); 
-            }
+            if(["Space", "ArrowUp", "ArrowDown", "KeyW", "KeyS"].includes(e.code)) e.preventDefault();
         });
         window.addEventListener('keyup', e => {
             keys[e.code] = false;
@@ -303,68 +372,49 @@ Here is your cleaned-up, distraction-free code:
 
         class CopCruiser {
             constructor() {
-                this.width = 115; this.height = 58;
-                this.y = lanePositions[Math.floor(Math.random() * lanePositions.length)] + 5;
+                this.width = 95; this.height = 48; // Scaled down down slightly to look proportional on phone displays
+                this.y = lanePositions[Math.floor(Math.random() * lanePositions.length)] + 4;
                 this.x = canvas.width + this.width; 
-                this.speed = baseCopSpeed + Math.random() * 4 + (currentLevel * 1.8);
+                this.speed = baseCopSpeed + Math.random() * 3 + (currentLevel * 1.5);
                 this.sirenState = true;
             }
             update() {
                 this.x -= this.speed;
                 if (frameCount % Math.max(3, 8 - currentLevel) === 0) this.sirenState = !this.sirenState;
 
-                if (Math.random() < 0.4) {
-                    createParticle(
-                        this.x + this.width, 
-                        this.y + this.height - 10, 
-                        Math.random() * 2 + 1, 
-                        Math.random() * 1 - 0.5, 
-                        Math.random() * 4 + 2, 
-                        'rgba(140, 140, 140, ALPHA)', 
-                        25
-                    );
-                }
                 if (Math.random() < 0.3) {
-                    let flareColor = this.sirenState ? 'rgba(232, 65, 24, ALPHA)' : 'rgba(0, 168, 255, ALPHA)';
-                    createParticle(this.x + 50, this.y - 4, Math.random() * 1, 0, Math.random() * 6 + 3, flareColor, 15);
+                    createParticle(this.x + this.width, this.y + this.height - 8, Math.random() * 2 + 1, 0, Math.random() * 3 + 1, 'rgba(140, 140, 140, ALPHA)', 20);
                 }
-                if (Math.random() < 0.15) {
-                    createParticle(
-                        this.x + (Math.random() * this.width),
-                        this.y + this.height - 2,
-                        this.speed * 0.4,
-                        -Math.random() * 3,
-                        Math.random() * 3 + 1,
-                        this.sirenState ? 'rgba(0, 168, 255, ALPHA)' : 'rgba(231, 76, 60, ALPHA)',
-                        12
-                    );
+                if (Math.random() < 0.25) {
+                    let flareColor = this.sirenState ? 'rgba(232, 65, 24, ALPHA)' : 'rgba(0, 168, 255, ALPHA)';
+                    createParticle(this.x + 40, this.y - 4, 0, 0, Math.random() * 5 + 2, flareColor, 12);
                 }
             }
             draw() {
                 ctx.fillStyle = '#1e3799'; 
                 ctx.fillRect(this.x, this.y, this.width, this.height);
                 ctx.fillStyle = '#dcdde1';
-                ctx.fillRect(this.x + 20, this.y + 4, 18, this.height - 8);
-                ctx.fillRect(this.x + 65, this.y + 4, 12, this.height - 8);
+                ctx.fillRect(this.x + 15, this.y + 3, 15, this.height - 6);
+                ctx.fillRect(this.x + 55, this.y + 3, 10, this.height - 6);
                 ctx.fillStyle = this.sirenState ? '#e84118' : '#00a8ff';
-                ctx.fillRect(this.x + 45, this.y - 8, 10, 8);
+                ctx.fillRect(this.x + 38, this.y - 6, 8, 6);
                 ctx.fillStyle = this.sirenState ? '#00a8ff' : '#e84118';
-                ctx.fillRect(this.x + 55, this.y - 8, 10, 8);
+                ctx.fillRect(this.x + 46, this.y - 6, 8, 6);
                 ctx.fillStyle = '#000';
-                ctx.fillRect(this.x + 18, this.y + this.height - 4, 22, 6);
-                ctx.fillRect(this.x + 75, this.y + this.height - 4, 22, 6);
-                ctx.fillRect(this.x + 18, this.y - 2, 22, 6);
-                ctx.fillRect(this.x + 75, this.y - 2, 22, 6);
+                ctx.fillRect(this.x + 15, this.y + this.height - 3, 18, 5);
+                ctx.fillRect(this.x + 62, this.y + this.height - 3, 18, 5);
+                ctx.fillRect(this.x + 15, this.y - 2, 18, 5);
+                ctx.fillRect(this.x + 62, this.y - 2, 18, 5);
             }
         }
 
         function resetGame() {
             score = 0; currentLevel = 1; frameCount = 0; cops = [];
             particles = []; windStreaks = []; shockwaves = [];
-            spawnRate = 65; baseCopSpeed = 6; 
+            spawnRate = 65; baseCopSpeed = 5.5; 
             resizeCanvas();
             
-            player.x = 150; 
+            player.x = 80; 
             player.y = lanePositions[1]; 
             player.z = 0; 
             player.zVelocity = 0; 
@@ -384,9 +434,9 @@ Here is your cleaned-up, distraction-free code:
                 currentLevel = newLevel;
                 levelDisplay.innerText = currentLevel;
                 spawnRate = Math.max(minSpawnRate, 65 - (currentLevel * 9));
-                baseCopSpeed = 6 + (currentLevel * 1.2);
+                baseCopSpeed = 5.5 + (currentLevel * 1.1);
                 
-                triggerScreenShake(20, 8);
+                triggerScreenShake(18, 6);
                 createShockwave(canvas.width / 2, canvas.height / 2, canvas.width, '#ffffff');
             }
         }
@@ -394,26 +444,12 @@ Here is your cleaned-up, distraction-free code:
         function handlePhysics() {
             if (keys['ArrowUp'] || keys['KeyW']) player.y -= player.speed;
             if (keys['ArrowDown'] || keys['KeyS']) player.y += player.speed;
-            if (keys['ArrowLeft'] || keys['KeyA']) player.x -= player.speed;
-            if (keys['ArrowRight'] || keys['KeyD']) player.x += player.speed;
-
-            if ((keys['ArrowRight'] || keys['KeyD']) && frameCount % 2 === 0) {
-                createParticle(
-                    player.x, 
-                    player.y + player.height / 2 + (Math.random() * 20 - 10),
-                    -8 - Math.random() * 4,
-                    (Math.random() - 0.5) * 3,
-                    Math.random() * 6 + 3,
-                    Math.random() > 0.5 ? 'rgba(230, 126, 34, ALPHA)' : 'rgba(231, 76, 60, ALPHA)',
-                    15
-                );
-            }
 
             if (keys['Space'] && !player.isJumping) {
-                player.zVelocity = 13.5; player.isJumping = true;
+                player.zVelocity = 13.0; player.isJumping = true;
                 playSoundJump(); 
-                for(let i=0; i<8; i++) {
-                    createParticle(player.x + player.width/2, player.y + player.height, (Math.random()-0.5)*4, (Math.random()-0.5)*2, Math.random()*5+2, 'rgba(200, 200, 200, ALPHA)', 20);
+                for(let i=0; i<6; i++) {
+                    createParticle(player.x + player.width/2, player.y + player.height, (Math.random()-0.5)*3, (Math.random()-0.5)*1, Math.random()*4+2, 'rgba(200, 200, 200, ALPHA)', 15);
                 }
             }
             if (player.isJumping) {
@@ -422,26 +458,18 @@ Here is your cleaned-up, distraction-free code:
                     player.z = 0; 
                     player.zVelocity = 0; 
                     player.isJumping = false; 
-                    triggerScreenShake(8, 4);
-                    createShockwave(player.x + player.width/2, player.y + player.height/2, 45, '#ffffff');
+                    triggerScreenShake(6, 3);
+                    createShockwave(player.x + player.width/2, player.y + player.height/2, 35, '#ffffff');
                 }
             }
             
             if (player.x < 0) player.x = 0;
             if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
-            if (player.y < 80) player.y = 80;
-            if (player.y > canvas.height - player.height - 80) player.y = canvas.height - player.height - 80;
+            if (player.y < 70) player.y = 70;
+            if (player.y > canvas.height - player.height - 70) player.y = canvas.height - player.height - 70;
 
-            if (!player.isJumping && frameCount % 3 === 0) {
-                createParticle(
-                    player.x + 10, 
-                    player.y + player.height - 5, 
-                    -Math.random() * 3 - 1, 
-                    (Math.random() - 0.5) * 1, 
-                    Math.random() * 4 + 2, 
-                    'rgba(180, 180, 180, ALPHA)', 
-                    18
-                );
+            if (!player.isJumping && frameCount % 4 === 0) {
+                createParticle(player.x + 5, player.y + player.height - 4, -2, 0, Math.random() * 3 + 1, 'rgba(180, 180, 180, ALPHA)', 14);
             }
         }
 
@@ -450,15 +478,15 @@ Here is your cleaned-up, distraction-free code:
             ctx.fillStyle = roadColors[currentLevel - 1];
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = '#57606f';
-            ctx.fillRect(0, 0, canvas.width, 80);
-            ctx.fillRect(0, canvas.height - 80, canvas.width, 80);
+            ctx.fillRect(0, 0, canvas.width, 70);
+            ctx.fillRect(0, canvas.height - 70, canvas.width, 70);
 
-            ctx.strokeStyle = '#fbc531'; ctx.lineWidth = 5; ctx.setLineDash([50, 40]);
-            ctx.lineDashOffset = frameCount * (10 + currentLevel * 2); 
-            const steps = (canvas.height - 160) / 3;
+            ctx.strokeStyle = '#fbc531'; ctx.lineWidth = 4; ctx.setLineDash([40, 30]);
+            ctx.lineDashOffset = frameCount * (9 + currentLevel * 1.8); 
+            const steps = (canvas.height - 140) / 3;
             ctx.beginPath();
-            ctx.moveTo(0, 80 + steps); ctx.lineTo(canvas.width, 80 + steps);
-            ctx.moveTo(0, 80 + steps * 2); ctx.lineTo(canvas.width, 80 + steps * 2);
+            ctx.moveTo(0, 70 + steps); ctx.lineTo(canvas.width, 70 + steps);
+            ctx.moveTo(0, 70 + steps * 2); ctx.lineTo(canvas.width, 70 + steps * 2);
             ctx.stroke();
             ctx.setLineDash([]);
         }
@@ -468,29 +496,23 @@ Here is your cleaned-up, distraction-free code:
             const groundY = player.y + player.height / 2;
             const currentAirY = groundY - player.z;
             const runCycle = frameCount * (0.25 + currentLevel * 0.04);
-            const bobbing = Math.sin(runCycle) * 5;
-            const limbSwing = Math.sin(runCycle) * 22;
+            const bobbing = Math.sin(runCycle) * 4;
+            const limbSwing = Math.sin(runCycle) * 18;
             const radius = player.width / 2;
 
             if (player.isJumping) {
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'; ctx.beginPath();
-                const shadowScale = Math.max(0.25, 1 - (player.z / 250));
-                ctx.ellipse(centerX, groundY + radius - 5, radius * shadowScale, 7 * shadowScale, 0, 0, Math.PI * 2);
+                const shadowScale = Math.max(0.25, 1 - (player.z / 200));
+                ctx.ellipse(centerX, groundY + radius - 4, radius * shadowScale, 5 * shadowScale, 0, 0, Math.PI * 2);
                 ctx.fill();
             }
 
-            ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 7; ctx.lineCap = 'round';
+            ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 5; ctx.lineCap = 'round';
             ctx.beginPath(); 
-            ctx.moveTo(centerX - 6, currentAirY + 12); ctx.lineTo(centerX - 18 - (player.isJumping ? 5 : limbSwing), currentAirY + 36);
+            ctx.moveTo(centerX - 4, currentAirY + 10); ctx.lineTo(centerX - 12 - (player.isJumping ? 4 : limbSwing), currentAirY + 30);
             ctx.stroke();
             ctx.beginPath(); 
-            ctx.moveTo(centerX + 6, currentAirY + 12); ctx.lineTo(centerX + 8 + (player.isJumping ? -10 : limbSwing), currentAirY + 36);
-            ctx.stroke();
-            ctx.beginPath(); 
-            ctx.moveTo(centerX, currentAirY - 5); ctx.lineTo(centerX - 18 - (player.isJumping ? -10 : limbSwing), currentAirY + 15);
-            ctx.stroke();
-            ctx.beginPath(); 
-            ctx.moveTo(centerX, currentAirY - 5); ctx.lineTo(centerX + 18 + (player.isJumping ? 15 : limbSwing), currentAirY + 15);
+            ctx.moveTo(centerX + 4, currentAirY + 10); ctx.lineTo(centerX + 6 + (player.isJumping ? -8 : limbSwing), currentAirY + 30);
             ctx.stroke();
 
             ctx.save(); ctx.beginPath();
@@ -500,17 +522,17 @@ Here is your cleaned-up, distraction-free code:
                 ctx.drawImage(customFace, centerX - radius, (currentAirY + bobbing) - radius, player.width, player.height);
             } else {
                 ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(centerX, currentAirY + bobbing, radius, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#000'; ctx.fillRect(centerX, (currentAirY + bobbing) - 8, 18, 8);
-                ctx.beginPath(); ctx.arc(centerX + 18, (currentAirY + bobbing) - 4, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#000'; ctx.fillRect(centerX, (currentAirY + bobbing) - 6, 12, 6);
+                ctx.beginPath(); ctx.arc(centerX + 12, (currentAirY + bobbing) - 3, 3, 0, Math.PI * 2); ctx.fill();
             }
             ctx.restore();
-            ctx.strokeStyle = '#e84118'; ctx.lineWidth = 3; ctx.beginPath();
+            ctx.strokeStyle = '#e84118'; ctx.lineWidth = 2.5; ctx.beginPath();
             ctx.arc(centerX, currentAirY + bobbing, radius, 0, Math.PI * 2); 
             ctx.stroke();
         }
 
         function rectIntersect(playerObj, copObj) {
-            if (playerObj.z > 43) return false; 
+            if (playerObj.z > 35) return false; 
             return playerObj.x < copObj.x + copObj.width && playerObj.x + playerObj.width > copObj.x &&
                    playerObj.y < copObj.y + copObj.height && playerObj.y + playerObj.height > copObj.y;
         }
@@ -542,28 +564,20 @@ Here is your cleaned-up, distraction-free code:
                 if (rectIntersect(player, cops[i])) {
                     running = false;
                     
-                    triggerScreenShake(35, 15);
-                    for (let pIdx = 0; pIdx < 40; pIdx++) {
-                        createParticle(
-                            player.x + player.width/2, 
-                            player.y + player.height/2, 
-                            (Math.random() - 0.5) * 12, 
-                            (Math.random() - 0.5) * 12, 
-                            Math.random() * 8 + 4, 
-                            pIdx % 2 === 0 ? 'rgba(232, 65, 24, ALPHA)' : 'rgba(241, 196, 15, ALPHA)', 
-                            45
-                        );
+                    triggerScreenShake(30, 12);
+                    for (let pIdx = 0; pIdx < 30; pIdx++) {
+                        createParticle(player.x + player.width/2, player.y + player.height/2, (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10, Math.random() * 6 + 3, pIdx % 2 === 0 ? 'rgba(232, 65, 24, ALPHA)' : 'rgba(241, 196, 15, ALPHA)', 35);
                     }
 
                     hud.style.background = "rgba(20, 20, 20, 0.9)";
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.85)'; ctx.fillRect(-50, -50, canvas.width + 100, canvas.height + 100);
                     
-                    ctx.fillStyle = '#e84118'; ctx.font = 'bold 54px monospace'; ctx.textAlign = 'center';
-                    ctx.fillText('BUSTED!', canvas.width / 2, canvas.height / 2 - 20);
+                    ctx.fillStyle = '#e84118'; ctx.font = 'bold 36px monospace'; ctx.textAlign = 'center';
+                    ctx.fillText('BUSTED!', canvas.width / 2, canvas.height / 2 - 10);
                     
-                    ctx.fillStyle = '#fff'; ctx.font = '22px monospace';
-                    ctx.fillText(`Fled ${score}m | Heat Level: ${currentLevel}`, canvas.width / 2, canvas.height / 2 + 35);
-                    ctx.fillText('Press START ESCAPE to break out again', canvas.width / 2, canvas.height / 2 + 80);
+                    ctx.fillStyle = '#fff'; ctx.font = '16px monospace';
+                    ctx.fillText(`Fled ${score}m | Heat Level: ${currentLevel}`, canvas.width / 2, canvas.height / 2 + 30);
+                    ctx.fillText('Tap START ESCAPE to retry', canvas.width / 2, canvas.height / 2 + 70);
                 }
                 if (cops[i].x < -150) cops.splice(i, 1);
             }
