@@ -206,12 +206,108 @@
         let screenShakeTime = 0;
         let screenShakeIntensity = 0;
 
+        // --- AUDIO ENGINE CENTRAL DATA ---
+        let audioCtx = null;
+        let bgmOscillator = null;
+        let bgmGainNode = null;
+
         const player = {
             x: 150, y: 200, z: 0,             
             zVelocity: 0, gravity: 0.6,     
             width: 60, height: 60,
             speed: 7, isJumping: false
         };
+
+        // --- AUDIO ENGINE PROCEDURAL GENERATION FUNCTIONS ---
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Build looping siren engine background track
+            bgmOscillator = audioCtx.createOscillator();
+            bgmGainNode = audioCtx.createGain();
+            
+            bgmOscillator.type = 'sawtooth';
+            bgmOscillator.frequency.setValueAtTime(55, audioCtx.currentTime); // Deep pursuit drone rumble
+            bgmGainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            
+            bgmOscillator.connect(bgmGainNode);
+            bgmGainNode.connect(audioCtx.destination);
+            bgmOscillator.start();
+        }
+
+        function updateBgmPitch() {
+            if (!audioCtx || !bgmOscillator) return;
+            // Siren speed up and intensity curves based on heat tier
+            const pitchMultiplier = 55 + (currentLevel * 12);
+            const cycleSpeed = 0.005 + (currentLevel * 0.003);
+            const dynamicSirenPitch = pitchMultiplier + (Math.sin(frameCount * cycleSpeed) * (20 + currentLevel * 8));
+            bgmOscillator.frequency.setValueAtTime(dynamicSirenPitch, audioCtx.currentTime);
+        }
+
+        function playSoundJump() {
+            if (!audioCtx) return;
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(480, audioCtx.currentTime + 0.18);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.18);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.18);
+        }
+
+        function playSoundLand() {
+            if (!audioCtx) return;
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(110, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.12);
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.12);
+        }
+
+        function playSoundCrash() {
+            if (!audioCtx) return;
+            // Stop ambient track rumbles instantly
+            if(bgmGainNode) bgmGainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+
+            // Synthesize noisy impact crash explosion
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(10, audioCtx.currentTime + 0.6);
+            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.6);
+        }
+
+        function playSoundLevelUp() {
+            if (!audioCtx) return;
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+        }
 
         function triggerScreenShake(duration, intensity) {
             screenShakeTime = duration;
@@ -290,11 +386,6 @@
             canvas.height = window.innerHeight;
             const playableHeight = canvas.height - 180; 
             lanePositions = [110, 110 + (playableHeight / 2), canvas.height - 110 - player.height];
-            
-            // Safety measure: dynamic position validation
-            if (player.y < 80 || player.y > canvas.height - 140) {
-                player.y = lanePositions[1];
-            }
         }
         window.addEventListener('resize', resizeCanvas);
 
@@ -310,24 +401,22 @@
         async function fetchGlobalLeaderboard() {
             try {
                 const response = await fetch(GLOBAL_DB_URL);
-                if (!response.ok) throw new Error("No data yet");
+                if (!response.ok) throw new Error("No database entries yet");
                 const globalData = await response.json();
                 
                 let sortedList = Object.values(globalData).sort((a, b) => b.score - a.score).slice(0, 5);
                 renderLeaderboardUI(sortedList);
             } catch (err) {
-                renderLeaderboardUI([
-                    {name: "Player1", score: 450},
-                    {name: "RunnerX", score: 300},
-                    {name: "Slayer", score: 200},
-                    {name: "Escapee", score: 120},
-                    {name: "Rookie", score: 60}
-                ]);
+                renderLeaderboardUI([]);
             }
         }
 
         function renderLeaderboardUI(list) {
             leaderboardContent.innerHTML = "";
+            if (list.length === 0) {
+                leaderboardContent.innerHTML = '<div class="loading-text" style="animation: none; color: #666;">[ NO ACTIVE WANTED RUNNERS ]</div>';
+                return;
+            }
             list.forEach((entry, idx) => {
                 leaderboardContent.innerHTML += `
                     <div class="leaderboard-row">
@@ -383,10 +472,10 @@
             }
         });
 
-        // Track user interaction robustly across key handlers
+        // Robust cross-browser interaction handler
         window.addEventListener('keydown', e => {
             keys[e.code] = true;
-            if(e.code === "Space" || e.code === "ArrowUp" || e.code === "ArrowDown") {
+            if(e.code === "Space" || e.code === "ArrowUp" || e.code === "ArrowDown" || e.code === "KeyW" || e.code === "KeyS") {
                 e.preventDefault(); 
             }
         });
@@ -395,6 +484,7 @@
         });
 
         startBtn.addEventListener('click', () => {
+            initAudio(); // Activate browser sound drivers via user interaction callback boundary
             if (!running) {
                 hud.style.background = "rgba(20, 20, 20, 0.5)";
                 resetGame();
@@ -423,12 +513,24 @@
                         Math.random() * 1 - 0.5, 
                         Math.random() * 4 + 2, 
                         'rgba(140, 140, 140, ALPHA)', 
-                        25
                     );
                 }
                 if (Math.random() < 0.3) {
                     let flareColor = this.sirenState ? 'rgba(232, 65, 24, ALPHA)' : 'rgba(0, 168, 255, ALPHA)';
                     createParticle(this.x + 50, this.y - 4, Math.random() * 1, 0, Math.random() * 6 + 3, flareColor, 15);
+                }
+                
+                // Added: High-speed electric chase spark effects spilling off police cruisers
+                if (Math.random() < 0.15) {
+                    createParticle(
+                        this.x + (Math.random() * this.width),
+                        this.y + this.height - 2,
+                        this.speed * 0.4,
+                        -Math.random() * 3,
+                        Math.random() * 3 + 1,
+                        this.sirenState ? 'rgba(0, 168, 255, ALPHA)' : 'rgba(231, 76, 60, ALPHA)',
+                        12
+                    );
                 }
             }
             draw() {
@@ -455,7 +557,11 @@
             spawnRate = 65; baseCopSpeed = 6; 
             resizeCanvas();
             
-            // Absolute initialization positioning reset
+            // Reactivate soundtrack levels smoothly on layout rebuilds
+            if (audioCtx && bgmGainNode) {
+                bgmGainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            }
+            
             player.x = 150; 
             player.y = lanePositions[1]; 
             player.z = 0; 
@@ -478,6 +584,7 @@
                 spawnRate = Math.max(minSpawnRate, 65 - (currentLevel * 9));
                 baseCopSpeed = 6 + (currentLevel * 1.2);
                 
+                playSoundLevelUp(); // Added: Alert chime when difficulty elevates
                 triggerScreenShake(20, 8);
                 createShockwave(canvas.width / 2, canvas.height / 2, canvas.width, '#ffffff');
             }
@@ -489,8 +596,22 @@
             if (keys['ArrowLeft'] || keys['KeyA']) player.x -= player.speed;
             if (keys['ArrowRight'] || keys['KeyD']) player.x += player.speed;
 
+            // Added: Nitro fire injection exhaust particle tracks while dashing rightward
+            if ((keys['ArrowRight'] || keys['KeyD']) && frameCount % 2 === 0) {
+                createParticle(
+                    player.x, 
+                    player.y + player.height / 2 + (Math.random() * 20 - 10),
+                    -8 - Math.random() * 4,
+                    (Math.random() - 0.5) * 3,
+                    Math.random() * 6 + 3,
+                    Math.random() > 0.5 ? 'rgba(230, 126, 34, ALPHA)' : 'rgba(231, 76, 60, ALPHA)',
+                    15
+                );
+            }
+
             if (keys['Space'] && !player.isJumping) {
                 player.zVelocity = 13.5; player.isJumping = true;
+                playSoundJump(); // Added: Kinetic leap sweep synthesizer audio trigger
                 for(let i=0; i<8; i++) {
                     createParticle(player.x + player.width/2, player.y + player.height, (Math.random()-0.5)*4, (Math.random()-0.5)*2, Math.random()*5+2, 'rgba(200, 200, 200, ALPHA)', 20);
                 }
@@ -501,12 +622,12 @@
                     player.z = 0; 
                     player.zVelocity = 0; 
                     player.isJumping = false; 
+                    playSoundLand(); // Added: Sub rumble shock impact sound
                     triggerScreenShake(8, 4);
                     createShockwave(player.x + player.width/2, player.y + player.height/2, 45, '#ffffff');
                 }
             }
             
-            // Constrain positions dynamically to visible lane structures
             if (player.x < 0) player.x = 0;
             if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
             if (player.y < 80) player.y = 80;
@@ -603,6 +724,8 @@
                 handleDifficultyProgression();
             }
 
+            updateBgmPitch(); // Process active background siren track modifications frame-by-frame
+
             ctx.save();
             if (screenShakeTime > 0) {
                 let dx = (Math.random() - 0.5) * screenShakeIntensity;
@@ -621,6 +744,7 @@
 
                 if (rectIntersect(player, cops[i])) {
                     running = false;
+                    playSoundCrash(); // Added: Explode synthesizer sound assets directly on collision block
                     
                     triggerScreenShake(35, 15);
                     for (let pIdx = 0; pIdx < 40; pIdx++) {
@@ -657,7 +781,6 @@
             requestAnimationFrame(loop);
         }
 
-        // Final layout and leaderboard calls
         resizeCanvas();
         fetchGlobalLeaderboard();
     </script>
