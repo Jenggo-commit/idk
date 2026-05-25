@@ -208,8 +208,6 @@
 
         // --- AUDIO ENGINE CENTRAL DATA ---
         let audioCtx = null;
-        let bgmOscillator = null;
-        let bgmGainNode = null;
 
         const player = {
             x: 150, y: 200, z: 0,             
@@ -222,27 +220,6 @@
         function initAudio() {
             if (audioCtx) return;
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            
-            // Build looping siren engine background track
-            bgmOscillator = audioCtx.createOscillator();
-            bgmGainNode = audioCtx.createGain();
-            
-            bgmOscillator.type = 'sawtooth';
-            bgmOscillator.frequency.setValueAtTime(55, audioCtx.currentTime); // Deep pursuit drone rumble
-            bgmGainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
-            
-            bgmOscillator.connect(bgmGainNode);
-            bgmGainNode.connect(audioCtx.destination);
-            bgmOscillator.start();
-        }
-
-        function updateBgmPitch() {
-            if (!audioCtx || !bgmOscillator) return;
-            // Siren speed up and intensity curves based on heat tier
-            const pitchMultiplier = 55 + (currentLevel * 12);
-            const cycleSpeed = 0.005 + (currentLevel * 0.003);
-            const dynamicSirenPitch = pitchMultiplier + (Math.sin(frameCount * cycleSpeed) * (20 + currentLevel * 8));
-            bgmOscillator.frequency.setValueAtTime(dynamicSirenPitch, audioCtx.currentTime);
         }
 
         function playSoundJump() {
@@ -277,9 +254,6 @@
 
         function playSoundCrash() {
             if (!audioCtx) return;
-            // Stop ambient track rumbles instantly
-            if(bgmGainNode) bgmGainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-
             // Synthesize noisy impact crash explosion
             let osc = audioCtx.createOscillator();
             let gain = audioCtx.createGain();
@@ -574,10 +548,6 @@
             spawnRate = 65; baseCopSpeed = 6; 
             resizeCanvas();
             
-            if (audioCtx && bgmGainNode) {
-                bgmGainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
-            }
-            
             player.x = 150; 
             player.y = lanePositions[1]; 
             player.z = 0; 
@@ -739,8 +709,6 @@
                 score++; scoreDisplay.innerText = score + "m";
                 handleDifficultyProgression();
             }
-
-            updateBgmPitch(); 
 
             ctx.save();
             if (screenShakeTime > 0) {
