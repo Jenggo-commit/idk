@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D International Pursuit Extreme</title>
+    <title>2D International Pursuit Extreme - FX Edition</title>
     <style>
         * {
             box-sizing: border-box;
@@ -199,23 +199,105 @@
         let customFace = null;
         let lanePositions = [];
 
+        // --- VISUAL EFFECTS ENGINE DATA ---
+        let particles = [];
+        let windStreaks = [];
+        let shockwaves = [];
+        let screenShakeTime = 0;
+        let screenShakeIntensity = 0;
+
         const player = {
-            x: 150, y: 0, z: 0,             
+            x: 150, y: 200, z: 0,             
             zVelocity: 0, gravity: 0.6,     
             width: 60, height: 60,
             speed: 7, isJumping: false
         };
+
+        function triggerScreenShake(duration, intensity) {
+            screenShakeTime = duration;
+            screenShakeIntensity = intensity;
+        }
+
+        function createParticle(x, y, vx, vy, size, color, maxLife) {
+            particles.push({ x, y, vx, vy, size, color, life: maxLife, maxLife });
+        }
+
+        function createShockwave(x, y, maxRadius, color) {
+            shockwaves.push({ x, y, radius: 0, maxRadius, alpha: 1 });
+        }
+
+        function updateAndDrawFX() {
+            // Wind environmental speed lines
+            if (Math.random() < 0.15 + (currentLevel * 0.05)) {
+                windStreaks.push({
+                    x: canvas.width,
+                    y: Math.random() * canvas.height,
+                    speed: Math.random() * 15 + 15,
+                    length: Math.random() * 80 + 40
+                });
+            }
+            
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 1;
+            for (let i = windStreaks.length - 1; i >= 0; i--) {
+                let w = windStreaks[i];
+                w.x -= w.speed;
+                ctx.beginPath();
+                ctx.moveTo(w.x, w.y);
+                ctx.lineTo(w.x + w.length, w.y);
+                ctx.stroke();
+                if (w.x + w.length < 0) windStreaks.splice(i, 1);
+            }
+
+            // Shockwaves / Jump landing rings
+            for (let i = shockwaves.length - 1; i >= 0; i--) {
+                let s = shockwaves[i];
+                s.radius += (s.maxRadius - s.radius) * 0.1;
+                s.alpha -= 0.04;
+                if (s.alpha <= 0) {
+                    shockwaves.splice(i, 1);
+                    continue;
+                }
+                ctx.strokeStyle = `rgba(255, 255, 255, ${s.alpha})`;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // Standard running dust & siren smoke particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+                
+                let alpha = p.life / p.maxLife;
+                ctx.fillStyle = p.color.replace('ALPHA', alpha);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
 
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             const playableHeight = canvas.height - 180; 
             lanePositions = [110, 110 + (playableHeight / 2), canvas.height - 110 - player.height];
-            if(!running && player.y === 0) player.y = lanePositions[1];
+            
+            // Safety measure: dynamic position validation
+            if (player.y < 80 || player.y > canvas.height - 140) {
+                player.y = lanePositions[1];
+            }
         }
         window.addEventListener('resize', resizeCanvas);
 
-        // Generates/Retrieves local unique storage tag to block cross-device record deletions
         function getPlayerUID() {
             let uid = localStorage.getItem('escape_uid');
             if(!uid) {
@@ -256,10 +338,9 @@
         }
 
         async function uploadScoreToGlobalCloud(finalScore) {
-            // Modified to accept custom desired user names
             let name = prompt("🎉 NEW RUN RECORD! Submit to International Leaderboard\nEnter your desired name (Max 10 chars):");
             if (!name || name.trim() === "") name = "Anonymous";
-            name = name.trim().slice(0, 10); // Cut to 10 characters max to prevent UI spilling
+            name = name.trim().slice(0, 10);
 
             leaderboardContent.innerHTML = '<div class="loading-text">[UPLOADING SCORE...]</div>';
 
@@ -289,8 +370,6 @@
             fetchGlobalLeaderboard();
         }
 
-        // --- CORE ENGINE LOOPS ---
-
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
@@ -304,11 +383,16 @@
             }
         });
 
+        // Track user interaction robustly across key handlers
         window.addEventListener('keydown', e => {
             keys[e.code] = true;
-            if(e.code === "Space") e.preventDefault(); 
+            if(e.code === "Space" || e.code === "ArrowUp" || e.code === "ArrowDown") {
+                e.preventDefault(); 
+            }
         });
-        window.addEventListener('keyup', e => keys[e.code] = false);
+        window.addEventListener('keyup', e => {
+            keys[e.code] = false;
+        });
 
         startBtn.addEventListener('click', () => {
             if (!running) {
@@ -330,6 +414,22 @@
             update() {
                 this.x -= this.speed;
                 if (frameCount % Math.max(3, 8 - currentLevel) === 0) this.sirenState = !this.sirenState;
+
+                if (Math.random() < 0.4) {
+                    createParticle(
+                        this.x + this.width, 
+                        this.y + this.height - 10, 
+                        Math.random() * 2 + 1, 
+                        Math.random() * 1 - 0.5, 
+                        Math.random() * 4 + 2, 
+                        'rgba(140, 140, 140, ALPHA)', 
+                        25
+                    );
+                }
+                if (Math.random() < 0.3) {
+                    let flareColor = this.sirenState ? 'rgba(232, 65, 24, ALPHA)' : 'rgba(0, 168, 255, ALPHA)';
+                    createParticle(this.x + 50, this.y - 4, Math.random() * 1, 0, Math.random() * 6 + 3, flareColor, 15);
+                }
             }
             draw() {
                 ctx.fillStyle = '#1e3799'; 
@@ -351,8 +451,17 @@
 
         function resetGame() {
             score = 0; currentLevel = 1; frameCount = 0; cops = [];
-            spawnRate = 65; baseCopSpeed = 6; resizeCanvas();
-            player.x = 150; player.y = lanePositions[1]; player.z = 0; player.zVelocity = 0; player.isJumping = false;
+            particles = []; windStreaks = []; shockwaves = [];
+            spawnRate = 65; baseCopSpeed = 6; 
+            resizeCanvas();
+            
+            // Absolute initialization positioning reset
+            player.x = 150; 
+            player.y = lanePositions[1]; 
+            player.z = 0; 
+            player.zVelocity = 0; 
+            player.isJumping = false;
+            
             scoreDisplay.innerText = "0m"; levelDisplay.innerText = "1";
         }
 
@@ -368,6 +477,9 @@
                 levelDisplay.innerText = currentLevel;
                 spawnRate = Math.max(minSpawnRate, 65 - (currentLevel * 9));
                 baseCopSpeed = 6 + (currentLevel * 1.2);
+                
+                triggerScreenShake(20, 8);
+                createShockwave(canvas.width / 2, canvas.height / 2, canvas.width, '#ffffff');
             }
         }
 
@@ -379,15 +491,38 @@
 
             if (keys['Space'] && !player.isJumping) {
                 player.zVelocity = 13.5; player.isJumping = true;
+                for(let i=0; i<8; i++) {
+                    createParticle(player.x + player.width/2, player.y + player.height, (Math.random()-0.5)*4, (Math.random()-0.5)*2, Math.random()*5+2, 'rgba(200, 200, 200, ALPHA)', 20);
+                }
             }
             if (player.isJumping) {
                 player.z += player.zVelocity; player.zVelocity -= player.gravity;
-                if (player.z <= 0) { player.z = 0; player.zVelocity = 0; player.isJumping = false; }
+                if (player.z <= 0) { 
+                    player.z = 0; 
+                    player.zVelocity = 0; 
+                    player.isJumping = false; 
+                    triggerScreenShake(8, 4);
+                    createShockwave(player.x + player.width/2, player.y + player.height/2, 45, '#ffffff');
+                }
             }
+            
+            // Constrain positions dynamically to visible lane structures
             if (player.x < 0) player.x = 0;
             if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
             if (player.y < 80) player.y = 80;
             if (player.y > canvas.height - player.height - 80) player.y = canvas.height - player.height - 80;
+
+            if (!player.isJumping && frameCount % 3 === 0) {
+                createParticle(
+                    player.x + 10, 
+                    player.y + player.height - 5, 
+                    -Math.random() * 3 - 1, 
+                    (Math.random() - 0.5) * 1, 
+                    Math.random() * 4 + 2, 
+                    'rgba(180, 180, 180, ALPHA)', 
+                    18
+                );
+            }
         }
 
         function drawRoad() {
@@ -450,7 +585,8 @@
             }
             ctx.restore();
             ctx.strokeStyle = '#e84118'; ctx.lineWidth = 3; ctx.beginPath();
-            ctx.arc(centerX, currentAirY + bobbing, radius, 0, Math.PI * 2); ctx.stroke();
+            ctx.arc(centerX, currentAirY + bobbing, radius, 0, Math.PI * 2); 
+            ctx.stroke();
         }
 
         function rectIntersect(playerObj, copObj) {
@@ -467,8 +603,17 @@
                 handleDifficultyProgression();
             }
 
-            drawRoad(); handlePhysics(); drawPlayer();
+            ctx.save();
+            if (screenShakeTime > 0) {
+                let dx = (Math.random() - 0.5) * screenShakeIntensity;
+                let dy = (Math.random() - 0.5) * screenShakeIntensity;
+                ctx.translate(dx, dy);
+                screenShakeTime--;
+            }
 
+            drawRoad(); 
+            handlePhysics(); 
+            
             if (frameCount % spawnRate === 0) cops.push(new CopCruiser());
 
             for (let i = cops.length - 1; i >= 0; i--) {
@@ -476,8 +621,22 @@
 
                 if (rectIntersect(player, cops[i])) {
                     running = false;
+                    
+                    triggerScreenShake(35, 15);
+                    for (let pIdx = 0; pIdx < 40; pIdx++) {
+                        createParticle(
+                            player.x + player.width/2, 
+                            player.y + player.height/2, 
+                            (Math.random() - 0.5) * 12, 
+                            (Math.random() - 0.5) * 12, 
+                            Math.random() * 8 + 4, 
+                            pIdx % 2 === 0 ? 'rgba(232, 65, 24, ALPHA)' : 'rgba(241, 196, 15, ALPHA)', 
+                            45
+                        );
+                    }
+
                     hud.style.background = "rgba(20, 20, 20, 0.9)";
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)'; ctx.fillRect(-50, -50, canvas.width + 100, canvas.height + 100);
                     
                     ctx.fillStyle = '#e84118'; ctx.font = 'bold 54px monospace'; ctx.textAlign = 'center';
                     ctx.fillText('BUSTED!', canvas.width / 2, canvas.height / 2 - 20);
@@ -490,10 +649,15 @@
                 }
                 if (cops[i].x < -150) cops.splice(i, 1);
             }
+
+            drawPlayer();
+            updateAndDrawFX(); 
+            ctx.restore();
+
             requestAnimationFrame(loop);
         }
 
-        // Initialization setups
+        // Final layout and leaderboard calls
         resizeCanvas();
         fetchGlobalLeaderboard();
     </script>
