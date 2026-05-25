@@ -199,7 +199,7 @@
         let customFace = null;
         let lanePositions = [];
 
-        // --- NEW VISUAL EFFECTS ENGINE DATA ---
+        // --- VISUAL EFFECTS ENGINE DATA ---
         let particles = [];
         let windStreaks = [];
         let shockwaves = [];
@@ -572,7 +572,8 @@
             }
             ctx.restore();
             ctx.strokeStyle = '#e84118'; ctx.lineWidth = 3; ctx.beginPath();
-            ctx.arc(centerX, currentAirY + bobbing, radius, 0, Math.PI * 2); stroke();
+            ctx.arc(centerX, currentAirY + bobbing, radius, 0, Math.PI * 2); 
+            ctx.stroke(); // <--- FIXED: Context prefix (ctx.) added back here
         }
 
         function rectIntersect(playerObj, copObj) {
